@@ -108,6 +108,10 @@
 
   <script>
     let activeTipPreset = 15;
+    function toggleReset() {
+        const isEmpty = billInput.value === '' && peopleInput.value === '' && customTip.value === '';
+        resetBtn.disabled = isEmpty;
+    }
 
     const billInput     = document.getElementById('bill');
     const billError     = document.getElementById('billError');
@@ -178,6 +182,7 @@
       outTip.textContent = '—'; outTotal.textContent = '—'; outPerson.textContent = '—';
       resultsPanel.style.opacity = '0.5';
       roundingNote.style.display = 'none';
+      toggleReset();
     });
 
     function calculate() {
@@ -192,6 +197,8 @@
         billInput.classList.remove('is-invalid', 'is-valid'); hideError(billError); hasErrors = true;
       } else if (isNaN(bill) || bill <= 0) {
         setFieldState(billInput, false); showError(billError, 'Bill amount must be a positive number.'); hasErrors = true;
+      } else if (bill > 1000000) {
+        setFieldState(billInput, false); showError(billError, 'Bill amount cannot exceed Rs 1,000,000.'); hasErrors = true;
       } else {
         setFieldState(billInput, true); hideError(billError);
       }
@@ -238,7 +245,9 @@
       } else {
         roundingNote.style.display = 'none';
       }
+      toggleReset();
     }
+    toggleReset(); 
   </script>
 </body>
 </html>
