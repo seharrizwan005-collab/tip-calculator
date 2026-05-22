@@ -182,6 +182,7 @@
       outTip.textContent = '—'; outTotal.textContent = '—'; outPerson.textContent = '—';
       resultsPanel.style.opacity = '0.5';
       roundingNote.style.display = 'none';
+      document.title = 'Tip & Bill Splitter';
       toggleReset();
     });
 
@@ -237,6 +238,7 @@
       outTip.textContent    = fmt(totalTip);
       outTotal.textContent  = fmt(grandTotal);
       outPerson.textContent = fmt(perPerson);
+      document.title = fmt(perPerson) + ' each — Tip Splitter';
       resultsPanel.style.opacity = '1';
 
       if (people > 1) {
