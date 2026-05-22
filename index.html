@@ -129,7 +129,7 @@
     const roundingNote  = document.getElementById('roundingNote');
     const tipBtns       = document.querySelectorAll('.tip-btn[data-tip]');
 
-    function fmt(n) { return 'Rs' + n.toFixed(2); }
+    function fmt(n) { return 'Rs ' + n.toFixed(2); }
     function ceilToCents(n) { return Math.ceil(n * 100) / 100; }
     function showError(el, msg) { el.textContent = msg; el.style.display = 'block'; }
     function hideError(el) { el.textContent = ''; el.style.display = 'none'; }
