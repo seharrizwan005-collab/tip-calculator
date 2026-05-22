@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tip &amp; Bill Splitter</title>
+  <!-- Bootstrap 5 CDN -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <style>
+    body { background-color: #f8f9fa; }
+
+    .tip-btn.active {
+      background-color: #0d6efd;
+      color: #fff;
+      border-color: #0d6efd;
+    }
+
+    .result-card {
+      background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+      color: #fff;
+      border-radius: 12px;
+    }
+
+    .result-item {
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+      padding: 0.75rem 0;
+    }
+    .result-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .result-label { font-size: 0.8rem; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px; }
+    .result-value { font-size: 1.4rem; font-weight: 700; }
+    .result-value.highlight { font-size: 1.8rem; }
+    .form-label { font-weight: 600; color: #343a40; }
+  </style>
+</head>
+<body>
+  <div class="container py-5" style="max-width: 520px;">
+
+    <div class="text-center mb-4">
+      <h1 class="fw-bold mb-1" style="font-size: 1.8rem;">Tip &amp; Bill Splitter</h1>
+      <p class="text-muted small">Results update as you type</p>
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-4 mb-4">
+      <div class="card-body p-4">
+
+        <!-- Bill Amount -->
+        <div class="mb-3">
+          <label for="bill" class="form-label">Bill Amount (Rs)</label>
+          <div class="input-group">
+            <span class="input-group-text">Rs</span>
+            <input type="number" id="bill" class="form-control" placeholder="0.00" min="0.01" step="0.01" />
+          </div>
+          <div id="billError" class="invalid-feedback" style="display:none;"></div>
+        </div>
+
+        <!-- Tip Percentage -->
+        <div class="mb-3">
+          <label class="form-label d-block">Tip Percentage</label>
+          <div class="d-flex gap-2 flex-wrap mb-2">
+            <button type="button" class="btn btn-outline-primary tip-btn" data-tip="10">10%</button>
+            <button type="button" class="btn btn-outline-primary tip-btn active" data-tip="15">15%</button>
+            <button type="button" class="btn btn-outline-primary tip-btn" data-tip="20">20%</button>
+            <button type="button" class="btn btn-outline-secondary tip-btn" id="customBtn">Custom</button>
+          </div>
+          <div id="customTipWrapper" style="display:none;">
+            <div class="input-group">
+              <input type="number" id="customTip" class="form-control" placeholder="Enter tip %" min="0" max="100" step="0.1" />
+              <span class="input-group-text">%</span>
+            </div>
+            <div id="tipError" class="invalid-feedback" style="display:none;"></div>
+          </div>
+        </div>
+
+        <!-- Number of People -->
+        <div class="mb-4">
+          <label for="people" class="form-label">Number of People</label>
+          <input type="number" id="people" class="form-control" placeholder="1" min="1" step="1" />
+          <div id="peopleError" class="invalid-feedback" style="display:none;"></div>
+        </div>
+
+        <!-- Reset -->
+        <button type="button" class="btn btn-outline-danger w-100" id="resetBtn">Reset</button>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="result-card p-4 shadow" id="resultsPanel" style="opacity:0.5;">
+      <h2 class="text-white-50 text-uppercase mb-3" style="font-size:0.75rem; letter-spacing:1px;">Results</h2>
+      <div class="result-item d-flex justify-content-between align-items-center">
+        <span class="result-label">Total Tip</span>
+        <span class="result-value" id="outTip">—</span>
+      </div>
+      <div class="result-item d-flex justify-content-between align-items-center">
+        <span class="result-label">Grand Total</span>
+        <span class="result-value" id="outTotal">—</span>
+      </div>
+      <div class="result-item d-flex justify-content-between align-items-center pt-2">
+        <span class="result-label" style="font-size:1rem;">Each Person Pays</span>
+        <span class="result-value highlight" id="outPerson">—</span>
+      </div>
+    </div>
+
+    <p class="text-muted text-center small mt-2" id="roundingNote" style="display:none;"></p>
+  </div>
+
+  <script>
+    let activeTipPreset = 15;
+
+    const billInput     = document.getElementById('bill');
+    const billError     = document.getElementById('billError');
+    const customBtn     = document.getElementById('customBtn');
+    const customWrapper = document.getElementById('customTipWrapper');
+    const customTip     = document.getElementById('customTip');
+    const tipError      = document.getElementById('tipError');
+    const peopleInput   = document.getElementById('people');
+    const peopleError   = document.getElementById('peopleError');
+    const resetBtn      = document.getElementById('resetBtn');
+    const resultsPanel  = document.getElementById('resultsPanel');
+    const outTip        = document.getElementById('outTip');
+    const outTotal      = document.getElementById('outTotal');
+    const outPerson     = document.getElementById('outPerson');
+    const roundingNote  = document.getElementById('roundingNote');
+    const tipBtns       = document.querySelectorAll('.tip-btn[data-tip]');
+
+    function fmt(n) { return 'Rs' + n.toFixed(2); }
+    function ceilToCents(n) { return Math.ceil(n * 100) / 100; }
+    function showError(el, msg) { el.textContent = msg; el.style.display = 'block'; }
+    function hideError(el) { el.textContent = ''; el.style.display = 'none'; }
+    function setFieldState(input, isValid) {
+      input.classList.toggle('is-invalid', !isValid);
+      input.classList.toggle('is-valid', isValid);
+    }
+
+    tipBtns.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        activeTipPreset = parseInt(btn.dataset.tip, 10);
+        tipBtns.forEach(function(b) { b.classList.remove('active'); });
+        customBtn.classList.remove('active');
+        btn.classList.add('active');
+        customWrapper.style.display = 'none';
+        customTip.value = '';
+        hideError(tipError);
+        calculate();
+      });
+    });
+
+    customBtn.addEventListener('click', function() {
+      activeTipPreset = null;
+      tipBtns.forEach(function(b) { b.classList.remove('active'); });
+      customBtn.classList.add('active');
+      customWrapper.style.display = 'block';
+      customTip.focus();
+      calculate();
+    });
+
+    billInput.addEventListener('input', calculate);
+    customTip.addEventListener('input', calculate);
+    peopleInput.addEventListener('input', calculate);
+
+    resetBtn.addEventListener('click', function() {
+      billInput.value = '';
+      customTip.value = '';
+      peopleInput.value = '';
+      activeTipPreset = 15;
+      tipBtns.forEach(function(b) {
+        b.classList.remove('active');
+        if (parseInt(b.dataset.tip, 10) === 15) b.classList.add('active');
+      });
+      customBtn.classList.remove('active');
+      customWrapper.style.display = 'none';
+      [billInput, customTip, peopleInput].forEach(function(el) {
+        el.classList.remove('is-invalid', 'is-valid');
+      });
+      hideError(billError); hideError(tipError); hideError(peopleError);
+      outTip.textContent = '—'; outTotal.textContent = '—'; outPerson.textContent = '—';
+      resultsPanel.style.opacity = '0.5';
+      roundingNote.style.display = 'none';
+    });
+
+    function calculate() {
+      const billStr   = billInput.value.trim();
+      const peopleStr = peopleInput.value.trim();
+      const bill      = parseFloat(billStr);
+      const people    = parseInt(peopleStr, 10);
+      const tipPct    = activeTipPreset !== null ? activeTipPreset : parseFloat(customTip.value.trim());
+      let hasErrors   = false;
+
+      if (billStr === '') {
+        billInput.classList.remove('is-invalid', 'is-valid'); hideError(billError); hasErrors = true;
+      } else if (isNaN(bill) || bill <= 0) {
+        setFieldState(billInput, false); showError(billError, 'Bill amount must be a positive number.'); hasErrors = true;
+      } else {
+        setFieldState(billInput, true); hideError(billError);
+      }
+
+      if (activeTipPreset === null) {
+        const customStr = customTip.value.trim();
+        if (customStr === '') {
+          customTip.classList.remove('is-invalid', 'is-valid'); hideError(tipError); hasErrors = true;
+        } else if (isNaN(tipPct) || tipPct < 0) {
+          setFieldState(customTip, false); showError(tipError, 'Tip % must be 0 or higher.'); hasErrors = true;
+        } else if (tipPct > 100) {
+          setFieldState(customTip, false); showError(tipError, 'Tip % cannot exceed 100%.'); hasErrors = true;
+        } else {
+          setFieldState(customTip, true); hideError(tipError);
+        }
+      }
+
+      if (peopleStr === '') {
+        peopleInput.classList.remove('is-invalid', 'is-valid'); hideError(peopleError); hasErrors = true;
+      } else if (isNaN(people) || people < 1 || parseFloat(peopleStr) !== people) {
+        setFieldState(peopleInput, false); showError(peopleError, 'Must be a whole number ≥ 1.'); hasErrors = true;
+      } else {
+        setFieldState(peopleInput, true); hideError(peopleError);
+      }
+
+      if (hasErrors || isNaN(bill) || isNaN(tipPct) || isNaN(people)) {
+        outTip.textContent = '—'; outTotal.textContent = '—'; outPerson.textContent = '—';
+        resultsPanel.style.opacity = '0.5'; roundingNote.style.display = 'none';
+        return;
+      }
+
+      const totalTip   = bill * (tipPct / 100);
+      const grandTotal = bill + totalTip;
+      const perPerson  = ceilToCents(grandTotal / people);
+
+      outTip.textContent    = fmt(totalTip);
+      outTotal.textContent  = fmt(grandTotal);
+      outPerson.textContent = fmt(perPerson);
+      resultsPanel.style.opacity = '1';
+
+      if (people > 1) {
+        roundingNote.textContent   = 'Each person pays ' + fmt(perPerson) + ' · rounded up to the nearest cent';
+        roundingNote.style.display = 'block';
+      } else {
+        roundingNote.style.display = 'none';
+      }
+    }
+  </script>
+</body>
+</html>
